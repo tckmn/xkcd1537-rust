@@ -54,7 +54,23 @@ impl Debug for Token {
 }
 
 fn tokenize(cmd: String) -> Vec<Token> {
-    vec![Token::XNumber(10f32), Token::XString("test".to_string()),
-        Token::XArray(vec![Token::XNumber(42f32), Token::XNumber(1337f32)]),
-        Token::XOperator(Operator::Minus), Token::XFunction(Function::Floor)]
+    let mut tokens: Vec<Token> = vec![];
+    let mut pos: usize = 0;
+    while pos < cmd.len() {
+        if &cmd[pos..pos+1] == "\"" {
+            let endquote = cmd.rfind('"').unwrap() + 1;
+            tokens.push(Token::XString(cmd[pos..endquote].to_string()));
+            pos = endquote;
+        } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
+            tokens.push(Token::XFunction(Function::Range));
+            pos += 5;
+        } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "floor" {
+            tokens.push(Token::XFunction(Function::Floor));
+            pos += 5;
+        } else if pos+4 <= cmd.len() && &cmd[pos..pos+4] == "ceil" {
+            tokens.push(Token::XFunction(Function::Ceil));
+            pos += 4;
+        }
+    }
+    tokens
 }
