@@ -1,6 +1,7 @@
 use std::io;
 use std::io::prelude::*;
 use std::fmt::{Debug,Formatter,Error};
+use std::str::FromStr;
 
 fn main() {
     for n in 1.. {
@@ -57,11 +58,19 @@ fn tokenize(cmd: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
     let mut pos: usize = 0;
     while pos < cmd.len() {
-        if &cmd[pos..pos+1] == "\"" {
+        if cmd.chars().nth(pos).unwrap().is_digit(10) {
+            let num = cmd.chars().skip(pos).take_while(|c| c.is_digit(10))
+                .collect::<String>();
+            tokens.push(Token::XNumber(f32::from_str(&num).unwrap()));
+            pos += num.len();
+        } else if &cmd[pos..pos+1] == "\"" {
             let endquote = cmd.rfind('"').unwrap() + 1;
             tokens.push(Token::XString(cmd[pos..endquote].to_string()));
             pos = endquote;
-        } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
+        }
+        // TODO: array
+        // TODO: operator
+        else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
             tokens.push(Token::XFunction(Function::Range));
             pos += 5;
         } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "floor" {
@@ -70,6 +79,10 @@ fn tokenize(cmd: String) -> Vec<Token> {
         } else if pos+4 <= cmd.len() && &cmd[pos..pos+4] == "ceil" {
             tokens.push(Token::XFunction(Function::Ceil));
             pos += 4;
+        } else if &cmd[pos..pos+1] == " " || &cmd[pos..pos+1] == "\t" {
+            pos += 1;
+        } else {
+            panic!("Syntax error");
         }
     }
     tokens
