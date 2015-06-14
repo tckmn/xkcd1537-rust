@@ -15,7 +15,7 @@ fn main() {
     }
 }
 
-trait FromString<T> { fn from_string(String) -> Option<T>; }
+trait FromString<T> { fn from_string(String) -> Option<(T, usize)>; }
 enum Operator { Plus, Minus, Times, DividedBy, OpenParen, CloseParen,
     OpenBracket, CloseBracket, Comma }
 // apparently there's no cleaner way to do this
@@ -31,17 +31,17 @@ impl ToString for Operator {
     }
 }
 impl FromString<Operator> for Operator {
-    fn from_string(s: String) -> Option<Operator> {
+    fn from_string(s: String) -> Option<(Operator, usize)> {
         match &s[0..1] {
-            "+" => Some(Operator::Plus),
-            "-" => Some(Operator::Minus),
-            "*" => Some(Operator::Times),
-            "/" => Some(Operator::DividedBy),
-            "(" => Some(Operator::OpenParen),
-            ")" => Some(Operator::CloseParen),
-            "[" => Some(Operator::OpenBracket),
-            "]" => Some(Operator::CloseBracket),
-            "," => Some(Operator::Comma),
+            "+" => Some((Operator::Plus, 1)),
+            "-" => Some((Operator::Minus, 1)),
+            "*" => Some((Operator::Times, 1)),
+            "/" => Some((Operator::DividedBy, 1)),
+            "(" => Some((Operator::OpenParen, 1)),
+            ")" => Some((Operator::CloseParen, 1)),
+            "[" => Some((Operator::OpenBracket, 1)),
+            "]" => Some((Operator::CloseBracket, 1)),
+            "," => Some((Operator::Comma, 1)),
             _ => None
         }
     }
@@ -84,11 +84,12 @@ fn tokenize(cmd: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
     let mut pos: usize = 0;
     while pos < cmd.len() {
+        let c = cmd.chars().nth(pos).unwrap();
         let op_str = Operator::from_string(cmd.chars().skip(pos)
             .collect::<String>());
-        if cmd.chars().nth(pos).unwrap().is_digit(10) {
-            let num = cmd.chars().skip(pos).take_while(|c| c.is_digit(10))
-                .collect::<String>();
+        if c.is_digit(10) || c == '.' {
+            let num = cmd.chars().skip(pos).take_while(|c| c.is_digit(10) ||
+                *c == '.').collect::<String>();
             tokens.push(Token::XNumber(f32::from_str(&num).unwrap()));
             pos += num.len();
         } else if &cmd[pos..pos+1] == "\"" {
@@ -96,8 +97,9 @@ fn tokenize(cmd: String) -> Vec<Token> {
             tokens.push(Token::XString(cmd[pos..endquote].to_string()));
             pos = endquote;
         } else if op_str.is_some() {
-            tokens.push(Token::XOperator(op_str.unwrap()));
-            pos += 1;
+            let (s, len) = op_str.unwrap();
+            tokens.push(Token::XOperator(s));
+            pos += len;
         } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
             tokens.push(Token::XFunction(Function::Range));
             pos += 5;
