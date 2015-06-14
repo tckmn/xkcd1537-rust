@@ -53,18 +53,20 @@ impl Operator {
         match *self {
             Operator::Plus => 1, Operator::Minus => 1,
             Operator::Times => 2, Operator::DividedBy => 2,
-            _ => panic!("no precedence")
+            _ => 0
         }
     }
 }
 #[derive(PartialEq, Clone)]
-enum Function { Range, Floor, Ceil }
+enum Function { Range, Floor, Ceil, Wrap(usize) }
 impl ToString for Function {
     fn to_string(&self) -> String {
         match *self {
-            Function::Range => "range", Function::Floor => "floor",
-            Function::Ceil => "ceil"
-        }.to_string()
+            Function::Range => "range".to_string(),
+            Function::Floor => "floor".to_string(),
+            Function::Ceil => "ceil".to_string(),
+            Function::Wrap(n) => format!("wrap<{}>", n)
+        }
     }
 }
 impl FromString<Function> for Function {
@@ -149,7 +151,9 @@ fn evaluate(tokens: Vec<Token>) {
     let mut rpn: Vec<Token> = vec![];
     let mut opstack: Vec<Token> = vec![]; // must be Vec<Token> because can
                                           // contain Functions
+    let mut wrap_counts: Vec<usize> = vec![];
     for token in tokens {
+        let old_len = rpn.len();
         match token {
             Token::XNumber(n) => { rpn.push(Token::XNumber(n)); },
             Token::XString(s) => { rpn.push(Token::XString(s)); },
@@ -157,6 +161,7 @@ fn evaluate(tokens: Vec<Token>) {
             Token::XOperator(o) => {
                 match o {
                     Operator::Comma => {
+                        // THIS WILL PANIC on mismatched parens or misplaced comma
                         while opstack[opstack.len()-1] !=
                                 Token::XOperator(Operator::OpenParen) &&
                             opstack[opstack.len()-1] !=
@@ -166,11 +171,33 @@ fn evaluate(tokens: Vec<Token>) {
                     },
                     Operator::OpenParen => { opstack.push(Token::XOperator(o)); },
                     Operator::CloseParen => {
-                        // TODO
+                        while let Some(_) = match opstack.last() {
+                            Some(&Token::XOperator(Operator::OpenParen)) => None,
+                            Some(&ref x) => Some(x),
+                            _ => panic!("mismatched parens")} {
+                            rpn.push(opstack.pop().unwrap());
+                        }
+                        opstack.pop().unwrap(); // the matching open paren
+                        if let Some(_) = match opstack.last() {
+                            Some(&Token::XFunction(ref f)) => Some(f),
+                            _ => None
+                            } {
+                            rpn.push(opstack.pop().unwrap());
+                        }
                     },
-                    Operator::OpenBracket => { opstack.push(Token::XOperator(o)); },
+                    Operator::OpenBracket => {
+                        opstack.push(Token::XOperator(o));
+                        wrap_counts.push(0);
+                    },
                     Operator::CloseBracket => {
-                        // TODO
+                        while let Some(_) = match opstack.last() {
+                            Some(&Token::XOperator(Operator::OpenBracket)) => None,
+                            Some(&ref x) => Some(x),
+                            _ => panic!("mismatched bracket")} {
+                            rpn.push(opstack.pop().unwrap());
+                        }
+                        opstack.pop().unwrap(); // the matching open bracket
+                        rpn.push(Token::XFunction(Function::Wrap(wrap_counts.pop().unwrap())));
                     },
                     _ => {
                         while let Some(_) = match opstack.last() {
@@ -185,6 +212,10 @@ fn evaluate(tokens: Vec<Token>) {
                 }
             },
             Token::XFunction(f) => { opstack.push(Token::XFunction(f)); }
+        }
+        if !wrap_counts.is_empty() {
+            let idx = wrap_counts.len() - 1;
+            wrap_counts[idx] += rpn.len() - old_len;
         }
     }
     while let Some(op) = opstack.pop() {
