@@ -103,6 +103,8 @@ fn tokenize(cmd: String) -> Vec<Token> {
         let c = cmd.chars().nth(pos).unwrap();
         let op_str = Operator::from_string(cmd.chars().skip(pos)
             .collect::<String>());
+        let func_str = Function::from_string(cmd.chars().skip(pos)
+            .collect::<String>());
         if c.is_digit(10) || c == '.' {
             let num = cmd.chars().skip(pos).take_while(|c| c.is_digit(10) ||
                 *c == '.').collect::<String>();
@@ -116,15 +118,10 @@ fn tokenize(cmd: String) -> Vec<Token> {
             let (s, len) = op_str.unwrap();
             tokens.push(Token::XOperator(s));
             pos += len;
-        } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
-            tokens.push(Token::XFunction(Function::Range));
-            pos += 5;
-        } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "floor" {
-            tokens.push(Token::XFunction(Function::Floor));
-            pos += 5;
-        } else if pos+4 <= cmd.len() && &cmd[pos..pos+4] == "ceil" {
-            tokens.push(Token::XFunction(Function::Ceil));
-            pos += 4;
+        } else if func_str.is_some() {
+            let (s, len) = func_str.unwrap();
+            tokens.push(Token::XFunction(s));
+            pos += len;
         } else if &cmd[pos..pos+1] == " " || &cmd[pos..pos+1] == "\t" {
             pos += 1;
         } else {
