@@ -15,8 +15,37 @@ fn main() {
     }
 }
 
+trait FromString<T> { fn from_string(String) -> Option<T>; }
 enum Operator { Plus, Minus, Times, DividedBy, OpenParen, CloseParen,
     OpenBracket, CloseBracket, Comma }
+// apparently there's no cleaner way to do this
+impl ToString for Operator {
+    fn to_string(&self) -> String {
+        match *self {
+            Operator::Plus => "+", Operator::Minus => "-",
+            Operator::Times => "*", Operator::DividedBy => "/",
+            Operator::OpenParen => "(", Operator::CloseParen => ")",
+            Operator::OpenBracket => "[", Operator::CloseBracket => "]",
+            Operator::Comma => ","
+        }.to_string()
+    }
+}
+impl FromString<Operator> for Operator {
+    fn from_string(s: String) -> Option<Operator> {
+        match &s[0..1] {
+            "+" => Some(Operator::Plus),
+            "-" => Some(Operator::Minus),
+            "*" => Some(Operator::Times),
+            "/" => Some(Operator::DividedBy),
+            "(" => Some(Operator::OpenParen),
+            ")" => Some(Operator::CloseParen),
+            "[" => Some(Operator::OpenBracket),
+            "]" => Some(Operator::CloseBracket),
+            "," => Some(Operator::Comma),
+            _ => None
+        }
+    }
+}
 enum Function { Range, Floor, Ceil }
 enum Token {
     XNumber(f32),
@@ -38,13 +67,7 @@ impl Debug for Token {
                 write!(fmt, "{:?}", a);
             },
             Token::XOperator(ref o) => {
-                write!(fmt, "{}", match *o {
-                    Operator::Plus => "+", Operator::Minus => "-",
-                    Operator::Times => "*", Operator::DividedBy => "/",
-                    Operator::OpenParen => "(", Operator::CloseParen => ")",
-                    Operator::OpenBracket => "[", Operator::CloseBracket => "]",
-                    Operator::Comma => ","
-                });
+                write!(fmt, "{}", (*o).to_string());
             },
             Token::XFunction(ref f) => {
                 write!(fmt, "{}", match *f {
@@ -61,6 +84,8 @@ fn tokenize(cmd: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
     let mut pos: usize = 0;
     while pos < cmd.len() {
+        let op_str = Operator::from_string(cmd.chars().skip(pos)
+            .collect::<String>());
         if cmd.chars().nth(pos).unwrap().is_digit(10) {
             let num = cmd.chars().skip(pos).take_while(|c| c.is_digit(10))
                 .collect::<String>();
@@ -70,9 +95,10 @@ fn tokenize(cmd: String) -> Vec<Token> {
             let endquote = cmd.rfind('"').unwrap() + 1;
             tokens.push(Token::XString(cmd[pos..endquote].to_string()));
             pos = endquote;
-        }
-        // TODO: operator
-        else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
+        } else if op_str.is_some() {
+            tokens.push(Token::XOperator(op_str.unwrap()));
+            pos += 1;
+        } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
             tokens.push(Token::XFunction(Function::Range));
             pos += 5;
         } else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "floor" {
