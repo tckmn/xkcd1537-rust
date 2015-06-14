@@ -110,7 +110,7 @@ fn tokenize(cmd: String) -> Vec<Token> {
                 *c == '.').collect::<String>();
             tokens.push(Token::XNumber(f32::from_str(&num).unwrap()));
             pos += num.len();
-        } else if &cmd[pos..pos+1] == "\"" {
+        } else if c == '"' {
             let endquote = cmd.rfind('"').unwrap() + 1;
             tokens.push(Token::XString(cmd[pos..endquote].to_string()));
             pos = endquote;
@@ -122,7 +122,7 @@ fn tokenize(cmd: String) -> Vec<Token> {
             let (s, len) = func_str.unwrap();
             tokens.push(Token::XFunction(s));
             pos += len;
-        } else if &cmd[pos..pos+1] == " " || &cmd[pos..pos+1] == "\t" {
+        } else if c == ' ' || c == '\t' {
             pos += 1;
         } else {
             panic!("Syntax error");
