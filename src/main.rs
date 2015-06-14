@@ -47,6 +47,25 @@ impl FromString<Operator> for Operator {
     }
 }
 enum Function { Range, Floor, Ceil }
+impl ToString for Function {
+    fn to_string(&self) -> String {
+        match *self {
+            Function::Range => "range", Function::Floor => "floor",
+            Function::Ceil => "ceil"
+        }.to_string()
+    }
+}
+impl FromString<Function> for Function {
+    fn from_string(s: String) -> Option<(Function, usize)> {
+        if 5 <= s.len() && &s[0..5] == "range" {
+            Some((Function::Range, 5))
+        } else if 5 <= s.len() && &s[0..5] == "floor" {
+            Some((Function::Floor, 5))
+        } else if 4 <= s.len() && &s[0..4] == "ceil" {
+            Some((Function::Ceil, 4))
+        } else { None }
+    }
+}
 enum Token {
     XNumber(f32),
     XString(String),
@@ -58,22 +77,19 @@ impl Debug for Token {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             Token::XNumber(ref n) => {
-                write!(fmt, "{}", n);
+                try!(write!(fmt, "{}", n));
             },
             Token::XString(ref s) => {
-                write!(fmt, "{}", s);
+                try!(write!(fmt, "{}", s));
             },
             Token::XArray(ref a) => {
-                write!(fmt, "{:?}", a);
+                try!(write!(fmt, "{:?}", a));
             },
             Token::XOperator(ref o) => {
-                write!(fmt, "{}", (*o).to_string());
+                try!(write!(fmt, "{}", (*o).to_string()));
             },
             Token::XFunction(ref f) => {
-                write!(fmt, "{}", match *f {
-                    Function::Range => "range", Function::Floor => "floor",
-                    Function::Ceil => "ceil"
-                });
+                try!(write!(fmt, "{}", (*f).to_string()));
             }
         }
         Ok(())
