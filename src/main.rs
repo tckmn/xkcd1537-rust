@@ -16,6 +16,7 @@ fn main() {
 }
 
 trait FromString<T> { fn from_string(String) -> Option<(T, usize)>; }
+#[derive(PartialEq, Clone)]
 enum Operator { Plus, Minus, Times, DividedBy, OpenParen, CloseParen,
     OpenBracket, CloseBracket, Comma }
 // apparently there's no cleaner way to do this
@@ -46,6 +47,7 @@ impl FromString<Operator> for Operator {
         }
     }
 }
+#[derive(PartialEq, Clone)]
 enum Function { Range, Floor, Ceil }
 impl ToString for Function {
     fn to_string(&self) -> String {
@@ -66,6 +68,7 @@ impl FromString<Function> for Function {
         } else { None }
     }
 }
+#[derive(PartialEq, Clone)]
 enum Token {
     XNumber(f32),
     XString(String),
@@ -105,6 +108,7 @@ fn tokenize(cmd: String) -> Vec<Token> {
             .collect::<String>());
         let func_str = Function::from_string(cmd.chars().skip(pos)
             .collect::<String>());
+
         if c.is_digit(10) || c == '.' {
             let num = cmd.chars().skip(pos).take_while(|c| c.is_digit(10) ||
                 *c == '.').collect::<String>();
@@ -128,5 +132,23 @@ fn tokenize(cmd: String) -> Vec<Token> {
             panic!("Syntax error");
         }
     }
+
+    // handle arrays
+    while let Some(open_bracket) = tokens.iter()
+        .rposition(|x| *x == Token::XOperator(Operator::OpenBracket)) {
+        let close_bracket = tokens.iter().skip(open_bracket)
+            .position(|x| *x == Token::XOperator(Operator::CloseBracket))
+            .unwrap() + open_bracket;
+        let front = tokens.iter().cloned().take(open_bracket)
+            .collect::<Vec<Token>>();
+        let middle = tokens.iter().cloned().skip(open_bracket + 1)
+            .take(close_bracket - open_bracket - 1).collect::<Vec<Token>>();
+        let end = tokens.iter().cloned().skip(close_bracket + 1)
+            .collect::<Vec<Token>>();
+        tokens = front;
+        tokens.push(Token::XArray(middle));
+        tokens.extend(end);
+    }
+
     tokens
 }
