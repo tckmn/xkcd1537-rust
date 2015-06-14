@@ -12,6 +12,7 @@ fn main() {
         if cmd == "" { break; }  // ^D pressed
 
         println!("{:?}", tokenize(cmd.trim().to_string()));
+        evaluate(tokenize(cmd.trim().to_string()));
     }
 }
 
@@ -44,6 +45,15 @@ impl FromString<Operator> for Operator {
             "]" => Some((Operator::CloseBracket, 1)),
             "," => Some((Operator::Comma, 1)),
             _ => None
+        }
+    }
+}
+impl Operator {
+    fn prec(&self) -> u8 {
+        match *self {
+            Operator::Plus => 1, Operator::Minus => 1,
+            Operator::Times => 2, Operator::DividedBy => 2,
+            _ => panic!("no precedence")
         }
     }
 }
@@ -132,23 +142,54 @@ fn tokenize(cmd: String) -> Vec<Token> {
             panic!("Syntax error");
         }
     }
+    tokens
+}
 
-    // handle arrays
-    while let Some(open_bracket) = tokens.iter()
-        .rposition(|x| *x == Token::XOperator(Operator::OpenBracket)) {
-        let close_bracket = tokens.iter().skip(open_bracket)
-            .position(|x| *x == Token::XOperator(Operator::CloseBracket))
-            .unwrap() + open_bracket;
-        let front = tokens.iter().cloned().take(open_bracket)
-            .collect::<Vec<Token>>();
-        let middle = tokens.iter().cloned().skip(open_bracket + 1)
-            .take(close_bracket - open_bracket - 1).collect::<Vec<Token>>();
-        let end = tokens.iter().cloned().skip(close_bracket + 1)
-            .collect::<Vec<Token>>();
-        tokens = front;
-        tokens.push(Token::XArray(middle));
-        tokens.extend(end);
+fn evaluate(tokens: Vec<Token>) {
+    let mut rpn: Vec<Token> = vec![];
+    let mut opstack: Vec<Token> = vec![]; // must be Vec<Token> because can
+                                          // contain Functions
+    for token in tokens {
+        match token {
+            Token::XNumber(n) => { rpn.push(Token::XNumber(n)); },
+            Token::XString(s) => { rpn.push(Token::XString(s)); },
+            Token::XArray(_) => { panic!("array in tokens in evaluate()"); },
+            Token::XOperator(o) => {
+                match o {
+                    Operator::Comma => {
+                        while opstack[opstack.len()-1] !=
+                                Token::XOperator(Operator::OpenParen) &&
+                            opstack[opstack.len()-1] !=
+                                Token::XOperator(Operator::OpenBracket) {
+                            rpn.push(opstack.pop().unwrap());
+                        }
+                    },
+                    Operator::OpenParen => { opstack.push(Token::XOperator(o)); },
+                    Operator::CloseParen => {
+                        // TODO
+                    },
+                    Operator::OpenBracket => { opstack.push(Token::XOperator(o)); },
+                    Operator::CloseBracket => {
+                        // TODO
+                    },
+                    _ => {
+                        while let Some(_) = match opstack.last() {
+                            Some(&Token::XOperator(ref o2)) =>
+                                if o.prec() <= o2.prec() { Some(o2) }
+                                else { None },
+                            _ => None} {
+                            rpn.push(opstack.pop().unwrap());
+                        }
+                        opstack.push(Token::XOperator(o));
+                    }
+                }
+            },
+            Token::XFunction(f) => { opstack.push(Token::XFunction(f)); }
+        }
+    }
+    while let Some(op) = opstack.pop() {
+        rpn.push(op);
     }
 
-    tokens
+    println!("{:?}", rpn);
 }
