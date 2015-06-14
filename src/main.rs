@@ -15,7 +15,8 @@ fn main() {
     }
 }
 
-enum Operator { Plus, Minus, Times, DividedBy, OpenParen, CloseParen }
+enum Operator { Plus, Minus, Times, DividedBy, OpenParen, CloseParen,
+    OpenBracket, CloseBracket, Comma }
 enum Function { Range, Floor, Ceil }
 enum Token {
     XNumber(f32),
@@ -40,7 +41,9 @@ impl Debug for Token {
                 write!(fmt, "{}", match *o {
                     Operator::Plus => "+", Operator::Minus => "-",
                     Operator::Times => "*", Operator::DividedBy => "/",
-                    Operator::OpenParen => "(", Operator::CloseParen => ")"
+                    Operator::OpenParen => "(", Operator::CloseParen => ")",
+                    Operator::OpenBracket => "[", Operator::CloseBracket => "]",
+                    Operator::Comma => ","
                 });
             },
             Token::XFunction(ref f) => {
@@ -68,7 +71,6 @@ fn tokenize(cmd: String) -> Vec<Token> {
             tokens.push(Token::XString(cmd[pos..endquote].to_string()));
             pos = endquote;
         }
-        // TODO: array
         // TODO: operator
         else if pos+5 <= cmd.len() && &cmd[pos..pos+5] == "range" {
             tokens.push(Token::XFunction(Function::Range));
