@@ -11,8 +11,8 @@ fn main() {
         io::stdin().read_line(&mut cmd).unwrap();
         if cmd == "" { break; }  // ^D pressed
 
-        println!("{:?}", tokenize(cmd.trim().to_string()));
-        evaluate(tokenize(cmd.trim().to_string()));
+        //println!("{:?}", exec_rpn(to_rpn(tokenize(cmd.trim().to_string()))));
+        println!("{:?}", to_rpn(tokenize(cmd.trim().to_string())));
     }
 }
 
@@ -147,7 +147,7 @@ fn tokenize(cmd: String) -> Vec<Token> {
     tokens
 }
 
-fn evaluate(tokens: Vec<Token>) {
+fn to_rpn(tokens: Vec<Token>) -> Vec<Token> {
     let mut rpn: Vec<Token> = vec![];
     let mut opstack: Vec<Token> = vec![]; // must be Vec<Token> because can
                                           // contain Functions
@@ -222,5 +222,23 @@ fn evaluate(tokens: Vec<Token>) {
         rpn.push(op);
     }
 
-    println!("{:?}", rpn);
+    rpn
+}
+fn exec_rpn(rpn: Vec<Token>) -> Vec<Token> {
+    let mut stack: Vec<Token> = vec![];
+    for token in rpn {
+        match token {
+            Token::XOperator(Operator::Plus) => { },
+            Token::XOperator(Operator::Minus) => { },
+            Token::XOperator(Operator::Times) => { },
+            Token::XOperator(Operator::DividedBy) => { },
+            Token::XOperator(_) => { panic!("bad operator in exec_rpn"); },
+            Token::XFunction(Function::Range) => { },
+            Token::XFunction(Function::Floor) => { },
+            Token::XFunction(Function::Ceil) => { },
+            Token::XFunction(Function::Wrap(n)) => { },
+            _ => { stack.push(token) }
+        }
+    }
+    stack
 }
